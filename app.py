@@ -3,10 +3,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib.font_manager as fm
+import os
 
-# 日本語フォントを明示的に指定（macOS標準）
-font_path = "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc"
-jp_font = fm.FontProperties(fname=font_path)
+# フォント設定（macOS ローカルのみ）
+if os.path.exists("/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc"):
+    font_path = "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc"
+    jp_font = fm.FontProperties(fname=font_path)
+else:
+    jp_font = None  # Cloudなどでは標準フォントを使う
 
 st.title("リクエスト分析ツール")
 
