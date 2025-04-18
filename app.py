@@ -9,8 +9,11 @@ import os
 if os.path.exists("/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc"):
     font_path = "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc"
     jp_font = fm.FontProperties(fname=font_path)
+elif os.path.exists("fonts/NotoSansJP-Regular.ttf"):
+    font_path = "fonts/NotoSansJP-Regular.ttf"
+    jp_font = fm.FontProperties(fname=font_path)
 else:
-    jp_font = None  # Cloudなどでは標準フォントを使う
+    jp_font = None
 
 st.title("リクエスト分析ツール")
 
