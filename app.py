@@ -17,7 +17,7 @@ else:
 
 jp_font = fm.FontProperties(fname=font_path) if font_path else None
 
-st.title("リクエスト分析ツール（拡張版）")
+st.title("リクエスト分析ツール（日時フィルター対応）")
 
 # アップロード（複数対応）
 uploaded_files = st.file_uploader("CSVファイルをアップロード（複数可）", type="csv", accept_multiple_files=True)
@@ -33,14 +33,15 @@ if uploaded_files:
 
     df_all = pd.concat(all_data).reset_index(drop=True)
 
-    # 日付フィルター
-    min_date = df_all["リクエスト日時"].min().date()
-    max_date = df_all["リクエスト日時"].max().date()
-    date_range = st.date_input("表示する日付範囲を選択", [min_date, max_date], min_value=min_date, max_value=max_date)
-
-    if len(date_range) == 2:
-        start_date, end_date = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1] + pd.Timedelta(days=1))
-        df_all = df_all[(df_all["リクエスト日時"] >= start_date) & (df_all["リクエスト日時"] < end_date)]
+    # 日時フィルター
+    min_dt = df_all["リクエスト日時"].min()
+    max_dt = df_all["リクエスト日時"].max()
+    start_dt = st.datetime_input("開始日時", value=min_dt, min_value=min_dt, max_value=max_dt)
+    end_dt = st.datetime_input("終了日時", value=max_dt, min_value=min_dt, max_value=max_dt)
+    if start_dt >= end_dt:
+        st.error("終了日時は開始日時より後にしてください。")
+        st.stop()
+    df_all = df_all[(df_all["リクエスト日時"] >= start_dt) & (df_all["リクエスト日時"] <= end_dt)]
 
     # 1時間前までの件数を計算
     counts = []
@@ -52,7 +53,7 @@ if uploaded_files:
         counts.append(count)
     df_all["1時間前までの件数"] = counts
 
-    # X軸表示間隔
+    # X軸目盛り選択
     x_tick_options = {
         "1時間": mdates.HourLocator(interval=1),
         "30分": mdates.MinuteLocator(interval=30),
