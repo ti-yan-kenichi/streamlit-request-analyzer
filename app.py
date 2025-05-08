@@ -19,7 +19,6 @@ jp_font = fm.FontProperties(fname=font_path) if font_path else None
 
 st.title("リクエスト分析ツール（日時フィルター対応）")
 
-# アップロード（複数対応）
 uploaded_files = st.file_uploader("CSVファイルをアップロード（複数可）", type="csv", accept_multiple_files=True)
 
 if uploaded_files:
@@ -33,7 +32,7 @@ if uploaded_files:
 
     df_all = pd.concat(all_data).reset_index(drop=True)
 
-    # 日時フィルター（date_input + time_input 組み合わせ）
+    # 日時フィルター
     min_dt = df_all["リクエスト日時"].min()
     max_dt = df_all["リクエスト日時"].max()
 
@@ -65,37 +64,37 @@ if uploaded_files:
         counts.append(count)
     df_all["1時間前までの件数"] = counts
 
-    # X軸目盛り選択
+    # X軸目盛り選択（デフォルト: 1時間）
     x_tick_options = {
         "1時間": mdates.HourLocator(interval=1),
         "30分": mdates.MinuteLocator(interval=30),
         "15分": mdates.MinuteLocator(interval=15),
         "5分": mdates.MinuteLocator(interval=5)
     }
-    x_tick_label = st.selectbox("X軸の目盛り間隔", list(x_tick_options.keys()))
+    x_tick_label = st.selectbox("X軸の目盛り間隔", list(x_tick_options.keys()), index=0)
     x_tick_locator = x_tick_options[x_tick_label]
 
-    # Y軸目盛り設定
-    y_tick_label = st.selectbox("Y軸の目盛り間隔", [1000, 500, 300, 200, 100, 50])
+    # Y軸目盛り（デフォルト: 200）
+    y_tick_label = st.selectbox("Y軸の目盛り間隔", [1000, 500, 300, 200, 100, 50], index=3)
 
-    # 閾値入力
-    threshold = st.number_input("制限値（この件数を超えた時間を抽出）", min_value=1, step=1)
+    # 閾値（デフォルト: 360）
+    threshold = st.number_input("制限値（この件数を超えた時間を抽出）", min_value=1, step=1, value=360)
 
-    # グラフ表示
+    # グラフ描画（改善）
     st.subheader(f"リクエスト時系列グラフ（X軸: {x_tick_label}, Y軸: {y_tick_label}間隔）")
-    fig, ax = plt.subplots(figsize=(18, 6))
-    ax.plot(df_all["リクエスト日時"], df_all["1時間前までの件数"], marker='o', linestyle='-')
+    fig, ax = plt.subplots(figsize=(20, 6), dpi=120)
+    ax.plot(df_all["リクエスト日時"], df_all["1時間前までの件数"], marker='o', linestyle='-', markersize=4, linewidth=1.5)
 
     if jp_font:
-        ax.set_title("リクエスト件数（1時間前までの件数）", fontproperties=jp_font)
-        ax.set_xlabel("時刻", fontproperties=jp_font)
-        ax.set_ylabel("件数", fontproperties=jp_font)
+        ax.set_title("リクエスト件数（1時間前までの件数）", fontproperties=jp_font, fontsize=14)
+        ax.set_xlabel("時刻", fontproperties=jp_font, fontsize=12)
+        ax.set_ylabel("件数", fontproperties=jp_font, fontsize=12)
     else:
         ax.set_title("Requests in Past Hour")
         ax.set_xlabel("Time")
         ax.set_ylabel("Count")
 
-    ax.grid(True)
+    ax.grid(True, linestyle='--', alpha=0.5)
     ax.xaxis.set_major_locator(x_tick_locator)
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d %H:%M"))
     ax.set_yticks(range(0, int(df_all["1時間前までの件数"].max()) + y_tick_label, y_tick_label))
