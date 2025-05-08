@@ -33,14 +33,26 @@ if uploaded_files:
 
     df_all = pd.concat(all_data).reset_index(drop=True)
 
-    # 日時フィルター
+    # 日時フィルター（date_input + time_input 組み合わせ）
     min_dt = df_all["リクエスト日時"].min()
     max_dt = df_all["リクエスト日時"].max()
-    start_dt = st.datetime_input("開始日時", value=min_dt, min_value=min_dt, max_value=max_dt)
-    end_dt = st.datetime_input("終了日時", value=max_dt, min_value=min_dt, max_value=max_dt)
+
+    st.subheader("表示する日時範囲を選択")
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input("開始日", value=min_dt.date(), min_value=min_dt.date(), max_value=max_dt.date())
+        start_time = st.time_input("開始時刻", value=min_dt.time())
+    with col2:
+        end_date = st.date_input("終了日", value=max_dt.date(), min_value=min_dt.date(), max_value=max_dt.date())
+        end_time = st.time_input("終了時刻", value=max_dt.time())
+
+    start_dt = pd.to_datetime(f"{start_date} {start_time}")
+    end_dt = pd.to_datetime(f"{end_date} {end_time}")
+
     if start_dt >= end_dt:
         st.error("終了日時は開始日時より後にしてください。")
         st.stop()
+
     df_all = df_all[(df_all["リクエスト日時"] >= start_dt) & (df_all["リクエスト日時"] <= end_dt)]
 
     # 1時間前までの件数を計算
