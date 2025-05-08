@@ -20,14 +20,13 @@ jp_font = fm.FontProperties(fname=font_path) if font_path else None
 st.set_page_config(page_title="リクエスト分析ダッシュボード", layout="wide")
 st.title("📊 リクエスト分析ダッシュボード")
 
-# サイドバーで制限値などを事前に入力
+# サイドバー設定
 with st.sidebar:
     st.header("⚙️ 分析設定")
     threshold = st.number_input("制限値（この件数を超えると超過）", min_value=1, step=1, value=360)
     y_tick_label = st.selectbox("Y軸の目盛り間隔", [1000, 500, 300, 200, 100, 50], index=3)
     x_tick_label = st.selectbox("X軸の目盛り間隔", ["1時間", "30分", "15分", "5分"], index=0)
 
-# ファイルアップロード（メインエリア）
 uploaded_files = st.file_uploader("📁 CSVファイルをアップロード（複数可）", type="csv", accept_multiple_files=True)
 
 if uploaded_files:
@@ -73,7 +72,7 @@ if uploaded_files:
         counts.append(count)
     df_all["1時間前までの件数"] = counts
 
-    # グラフ設定
+    # X軸設定
     x_tick_options = {
         "1時間": mdates.HourLocator(interval=1),
         "30分": mdates.MinuteLocator(interval=30),
@@ -82,40 +81,43 @@ if uploaded_files:
     }
     x_tick_locator = x_tick_options[x_tick_label]
 
-    st.subheader(f"📈 リクエスト時系列グラフ（X軸: {x_tick_label}, Y軸: {y_tick_label}間隔）")
-    fig, ax = plt.subplots(figsize=(20, 6), dpi=120)
-    ax.plot(df_all["リクエスト日時"], df_all["1時間前までの件数"], marker='o', linestyle='-', markersize=4, linewidth=1.5)
+    with st.expander(f"📈 リクエスト時系列グラフ（X軸: {x_tick_label}, Y軸: {y_tick_label}）", expanded=True):
+        fig, ax = plt.subplots(figsize=(20, 6), dpi=120)
+        ax.plot(df_all["リクエスト日時"], df_all["1時間前までの件数"], marker='o', linestyle='-', markersize=4, linewidth=1.5)
 
-    if jp_font:
-        ax.set_title("リクエスト件数（1時間前までの件数）", fontproperties=jp_font, fontsize=14)
-        ax.set_xlabel("時刻", fontproperties=jp_font, fontsize=12)
-        ax.set_ylabel("件数", fontproperties=jp_font, fontsize=12)
-    else:
-        ax.set_title("Requests in Past Hour")
-        ax.set_xlabel("Time")
-        ax.set_ylabel("Count")
+        if jp_font:
+            ax.set_title("リクエスト件数（1時間前までの件数）", fontproperties=jp_font, fontsize=14)
+            ax.set_xlabel("時刻", fontproperties=jp_font, fontsize=12)
+            ax.set_ylabel("件数", fontproperties=jp_font, fontsize=12)
+        else:
+            ax.set_title("Requests in Past Hour")
+            ax.set_xlabel("Time")
+            ax.set_ylabel("Count")
 
-    ax.grid(True, linestyle='--', alpha=0.5)
-    ax.xaxis.set_major_locator(x_tick_locator)
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d %H:%M"))
-    ax.set_yticks(range(0, int(df_all["1時間前までの件数"].max()) + y_tick_label, y_tick_label))
-    plt.xticks(rotation=45)
-    st.pyplot(fig)
+        ax.grid(True, linestyle='--', alpha=0.5)
+        ax.xaxis.set_major_locator(x_tick_locator)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d %H:%M"))
+        ax.set_yticks(range(0, int(df_all["1時間前までの件数"].max()) + y_tick_label, y_tick_label))
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
 
-    # メトリクス
-    st.subheader("📊 統計情報")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("合計リクエスト数", len(df_all))
-    col2.metric("最大件数（1時間内）", df_all["1時間前までの件数"].max())
-    col3.metric("平均件数（1時間内）", round(df_all["1時間前までの件数"].mean(), 2))
+        # 画像ダウンロード
+        img_bytes = io.BytesIO()
+        fig.savefig(img_bytes, format="png", bbox_inches="tight")
+        st.download_button("📷 グラフをPNGでダウンロード", img_bytes.getvalue(), file_name="request_graph.png", mime="image/png")
 
-    # 閾値超過
-    st.subheader(f"⚠️ 制限値（{threshold}件）を超えたリクエスト")
-    exceeded = df_all[df_all["1時間前までの件数"] > threshold]
-    if not exceeded.empty:
-        st.dataframe(exceeded[["リクエスト日時", "1時間前までの件数"]])
-        csv_buffer = io.StringIO()
-        exceeded[["リクエスト日時", "1時間前までの件数"]].to_csv(csv_buffer, index=False)
-        st.download_button("📥 超過リストをCSVでダウンロード", csv_buffer.getvalue(), "exceeded_requests.csv", "text/csv")
-    else:
-        st.success("制限値を超えたリクエストはありません。")
+    with st.expander("📊 統計情報", expanded=True):
+        col1, col2, col3 = st.columns(3)
+        col1.metric("合計リクエスト数", len(df_all))
+        col2.metric("最大件数（1時間内）", df_all["1時間前までの件数"].max())
+        col3.metric("平均件数（1時間内）", round(df_all["1時間前までの件数"].mean(), 2))
+
+    with st.expander(f"⚠️ 制限値（{threshold}件）を超えたリクエスト", expanded=True):
+        exceeded = df_all[df_all["1時間前までの件数"] > threshold]
+        if not exceeded.empty:
+            st.dataframe(exceeded[["リクエスト日時", "1時間前までの件数"]])
+            csv_buffer = io.StringIO()
+            exceeded[["リクエスト日時", "1時間前までの件数"]].to_csv(csv_buffer, index=False)
+            st.download_button("📥 超過リストをCSVでダウンロード", csv_buffer.getvalue(), "exceeded_requests.csv", "text/csv")
+        else:
+            st.success("制限値を超えたリクエストはありません。")
